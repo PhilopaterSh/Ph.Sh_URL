@@ -23,6 +23,8 @@ const (
 	requestDelay   = 20 * time.Second
 	configDirName  = "Ph.Sh_url" // Updated config directory name
 	configFileName = "config.yaml"
+	retryAttempts  = 3
+	retryDelay     = 5 * time.Second
 
 	version = "1.0.0" // Tool version
 )
@@ -136,6 +138,35 @@ hudsonrock:
 	return os.WriteFile(path, []byte(defaultConfig), 0644) // Changed ioutil.WriteFile to os.WriteFile
 }
 
+// --- HTTP CLIENT WITH RETRY ---
+func makeRequestWithRetry(req *http.Request, silent bool, logChan chan<- logMessage, source string) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+
+	for i := 0; i < retryAttempts; i++ {
+		resp, err = http.DefaultClient.Do(req)
+		if err == nil {
+			// Success, return response
+			return resp, nil
+		}
+
+		if !silent {
+			logChan <- logMessage{Type: "WARNING", Source: source, Message: fmt.Sprintf("Request failed (attempt %d/%d): %v. Retrying in %v...", i+1, retryAttempts, err, retryDelay)}
+		}
+
+		// Don't retry on client-side errors, but do on server-side or network errors.
+		if resp != nil && (resp.StatusCode >= 400 && resp.StatusCode < 500) {
+			if !silent {
+				logChan <- logMessage{Type: "ERROR", Source: source, Message: fmt.Sprintf("Client error %d, not retrying.", resp.StatusCode)}
+			}
+			return resp, err // Return response as-is for client errors
+		}
+
+		time.Sleep(retryDelay)
+	}
+	return nil, fmt.Errorf("request failed after %d attempts: %w", retryAttempts, err)
+}
+
 // --- DATA FETCHING GOROUTINES ---
 
 func getVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- []string, logChan chan<- logMessage, wg *sync.WaitGroup, silent bool) {
@@ -145,7 +176,17 @@ func getVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 	}
 	apiKey := apiKeys[apiKeyIndex%len(apiKeys)]
 	url := fmt.Sprintf("https://www.virustotal.com/vtapi/v2/domain/report?apikey=%s&domain=%s", apiKey, domain)
-	resp, err := http.Get(url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		if !silent {
+			logChan <- logMessage{Type: "ERROR", Source: "VT", Message: fmt.Sprintf("Failed to create request: %v", err)}
+		}
+		ch <- nil
+		return
+	}
+
+	resp, err := makeRequestWithRetry(req, silent, logChan, "VT")
 	if err != nil {
 		if !silent {
 			logChan <- logMessage{Type: "ERROR", Source: "VT", Message: err.Error()}
@@ -154,7 +195,8 @@ func getVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 		return
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body) // Changed ioutil.ReadAll to io.ReadAll
+
+	body, _ := io.ReadAll(resp.Body)
 	var r VirusTotalResponse
 	json.Unmarshal(body, &r)
 	var urls []string
@@ -177,12 +219,20 @@ func getAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 	page := 1
 	for {
 		url := fmt.Sprintf("https://otx.alienvault.com/api/v1/indicators/domain/%s/url_list?limit=500&page=%d", domain, page)
-		req, _ := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			if !silent {
+				logChan <- logMessage{Type: "ERROR", Source: "OTX", Message: fmt.Sprintf("Failed to create request: %v", err)}
+			}
+			break
+		}
+
 		if len(apiKeys) > 0 {
 			apiKey := apiKeys[apiKeyIndex%len(apiKeys)]
 			req.Header.Add("X-OTX-API-KEY", apiKey)
 		}
-		resp, err := http.DefaultClient.Do(req)
+
+		resp, err := makeRequestWithRetry(req, silent, logChan, "OTX")
 		if err != nil {
 			if !silent {
 				logChan <- logMessage{Type: "ERROR", Source: "OTX", Message: err.Error()}
@@ -190,7 +240,8 @@ func getAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 			break
 		}
 		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body) // Changed ioutil.ReadAll to io.ReadAll
+
+		body, _ := io.ReadAll(resp.Body)
 		var r AlienVaultResponse
 		json.Unmarshal(body, &r)
 		for _, item := range r.URLList {
@@ -210,7 +261,17 @@ func getAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 func getWaybackURLs(domain string, ch chan<- []string, logChan chan<- logMessage, wg *sync.WaitGroup, silent bool) {
 	defer wg.Done()
 	url := fmt.Sprintf("https://web.archive.org/cdx/search/cdx?url=*.%s/*&output=text&fl=original&collapse=urlkey", domain)
-	resp, err := http.Get(url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		if !silent {
+			logChan <- logMessage{Type: "ERROR", Source: "Wayback", Message: fmt.Sprintf("Failed to create request: %v", err)}
+		}
+		ch <- nil
+		return
+	}
+
+	resp, err := makeRequestWithRetry(req, silent, logChan, "Wayback")
 	if err != nil {
 		if !silent {
 			logChan <- logMessage{Type: "ERROR", Source: "Wayback", Message: err.Error()}
@@ -219,7 +280,8 @@ func getWaybackURLs(domain string, ch chan<- []string, logChan chan<- logMessage
 		return
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body) // Changed ioutil.ReadAll to io.ReadAll
+
+	body, _ := io.ReadAll(resp.Body)
 	lines := strings.Split(string(body), "\n")
 	// Filter out empty lines
 	var urls []string
@@ -238,7 +300,14 @@ func getHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 	defer wg.Done()
 
 	url := fmt.Sprintf("https://cavalier.hudsonrock.com/api/json/v2/osint-tools/search-by-domain?domain=%s", domain)
-	req, _ := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		if !silent {
+			logChan <- logMessage{Type: "ERROR", Source: "HudsonRock", Message: fmt.Sprintf("Failed to create request: %v", err)}
+		}
+ch <- nil
+		return
+	}
 
 	if len(apiKeys) > 0 {
 		apiKey := apiKeys[apiKeyIndex%len(apiKeys)]
@@ -249,7 +318,7 @@ func getHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 		}
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := makeRequestWithRetry(req, silent, logChan, "HudsonRock")
 	if err != nil {
 		if !silent {
 			logChan <- logMessage{Type: "ERROR", Source: "HudsonRock", Message: err.Error()}
@@ -259,7 +328,7 @@ func getHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body) // Changed ioutil.ReadAll to io.ReadAll
+	body, _ := io.ReadAll(resp.Body)
 	var r HudsonRockResponse
 	json.Unmarshal(body, &r)
 
@@ -372,7 +441,7 @@ func main() {
 	}
 
 	if !*silent {
-		log.Printf(colorBlue+"[INFO] Loaded %d domains."+colorReset, len(domains))
+		log.Printf(colorBlue+"[INFO] Loaded %d domains." + colorReset, len(domains))
 	}
 
 	excludedMap := make(map[string]bool)
@@ -384,6 +453,7 @@ func main() {
 
 	finalUrlSet := make(map[string]struct{})
 	apiKeyIndex := 0
+	var failedDomains []string // New slice for failed domains
 
 	// --- SIGNAL HANDLING ---
 	sigChan := make(chan os.Signal, 1)
@@ -402,6 +472,15 @@ func main() {
 
 		if err := writeLinesToFile(*outputFile, finalUrls); err != nil {
 			log.Fatalf(colorRed+"[FATAL] Failed to write URLs on interrupt: %v"+colorReset, err)
+		}
+
+		if len(failedDomains) > 0 {
+			if !*silent {
+				log.Printf(colorYellow+"[WARNING] %d domains failed to process and were saved to failed_domains.txt"+colorReset, len(failedDomains))
+			}
+			if err := writeLinesToFile("failed_domains.txt", failedDomains); err != nil {
+				log.Fatalf(colorRed+"[FATAL] Failed to write failed domains to file: %v"+colorReset, err)
+			}
 		}
 
 		if !*silent {
@@ -439,6 +518,7 @@ func main() {
 		logChan := make(chan logMessage, 4)
 		var wg sync.WaitGroup
 		var logWg sync.WaitGroup
+		var domainSuccess bool // Flag to track domain success
 
 		logWg.Add(1)
 		go func() {
@@ -495,10 +575,18 @@ func main() {
 
 		logWg.Wait()
 		for urls := range urlChannel {
+			if urls != nil {
+				domainSuccess = true
+			}
 			for _, u := range urls {
 				finalUrlSet[u] = struct{}{}
 			}
 		}
+
+		if !domainSuccess && runCount > 0 {
+			failedDomains = append(failedDomains, domain)
+		}
+
 		apiKeyIndex++
 
 		if i < len(domains)-1 {
@@ -517,6 +605,15 @@ func main() {
 		finalUrls = append(finalUrls, u)
 	}
 
+	if len(failedDomains) > 0 {
+		if !*silent {
+			log.Printf(colorYellow+"[WARNING] %d domains failed to process and were saved to failed_domains.txt"+colorReset, len(failedDomains))
+		}
+		if err := writeLinesToFile("failed_domains.txt", failedDomains); err != nil {
+			log.Fatalf(colorRed+"[FATAL] Failed to write failed domains to file: %v"+colorReset, err)
+		}
+	}
+
 	if *silent {
 		for _, u := range finalUrls {
 			fmt.Println(u)
@@ -528,3 +625,4 @@ func main() {
 		log.Printf(colorGreen+"[SUCCESS] All done! Found %d unique URLs. Results saved to %s"+colorReset, len(finalUrls), *outputFile)
 	}
 }
+
