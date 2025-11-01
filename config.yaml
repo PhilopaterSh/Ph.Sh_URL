@@ -1,0 +1,15 @@
+# Configuration file for GoVTScan
+# Add your API keys under the relevant sections.
+# You can add as many keys as you want for each service.
+
+# VirusTotal API keys (Required for VirusTotal source)
+virustotal:
+  - "YOUR_VT_API_KEY_1"
+
+# AlienVault OTX API keys (Optional, but recommended for better reliability)
+alienvault:
+  - "YOUR_OTX_API_KEY_1"
+
+# Hudson Rock API keys (Optional, but required to get unredacted data)
+hudsonrock:
+  - "YOUR_HUDSONROCK_API_KEY_1"
