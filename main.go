@@ -26,7 +26,7 @@ const (
 	retryAttempts  = 3
 	retryDelay     = 5 * time.Second
 
-	version = "1.0.0" // Tool version
+	version = "1.1.6" // Tool version
 )
 
 const (
