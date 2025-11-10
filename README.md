@@ -5,12 +5,13 @@
 ##  Features
 
 - **Multiple Sources**: Gathers data from 4 different sources to ensure broad coverage.
-- **High Performance**: Utilizes Go's Goroutines technology to execute searches in parallel, providing superior speed.
+- **High Performance**: Utilizes Go's Goroutines technology to execute searches in parallel for different sources *within a single domain*, providing superior speed for each domain's lookup.
 - **Flexible Input/Output**: Supports reading domains from a file or standard input (stdin), and allows specifying the output file.
 - **Flexible Key Management**: Relies on a `config.yaml` file for API key management.
 - **Automatic Setup**: The tool automatically creates its configuration file when needed.
 - **Silent Mode**: The `-silent` option prints only URLs, ideal for scripting. When not in silent mode, logging output is concise, without timestamps, with simplified source-specific messages, and includes a domain counter (e.g., `Processing domain 5/100: example.com`).
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
+- **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
 
 ## 🎨 Colored Output
 
@@ -53,6 +54,12 @@ Example of the new progress indication:
 ## 🚦 Graceful Shutdown
 
 `Ph.Sh_URL` supports graceful shutdown. If you interrupt the process (e.g., by pressing `Ctrl+C`), the tool will automatically save all the URLs found up to that point to the output file before exiting. This ensures that you don't lose any data even if you stop the scan midway.
+
+## 💾 Logging and Resuming
+
+`Ph.Sh_URL` now supports logging its progress and resuming from where it left off. If the script is interrupted, it saves the last successfully processed domain to a log file. Upon restart, it checks this log file and continues processing from the next domain in the list. Once the entire process is complete, the log file is automatically deleted.
+
+Furthermore, to prevent data loss between sessions, `Ph.Sh_URL` now loads any existing URLs from the specified output file at startup. This means that if you run the tool multiple times, targeting the same output file, the results will be merged, and you won't lose the data from previous scans. The final output will be a unique collection of all URLs found across all sessions.
 
 ##  Data Sources
 
@@ -130,6 +137,16 @@ cat domains.txt | Ph.Sh_url -silent | tee urls.txt
 - `-silent`: To enable silent mode.
 - `-e`: Comma-separated list of sources to exclude (e.g., `vt,hr`). Available sources: `vt` (VirusTotal), `otx` (AlienVault OTX), `wayback` (The Wayback Machine), `hr` (Hudson Rock).
 
+## 🔧 Troubleshooting
+
+### Version not updating after `go install`
+
+Due to caching in Go's module proxy, `go install` might not immediately fetch the latest tagged version. If you run `go install ...@latest` and see an older version being installed, you can bypass the proxy by using the `GOPRIVATE` environment variable:
+
+```bash
+GOPRIVATE=github.com/PhilopaterSh/Ph.Sh_url go install github.com/PhilopaterSh/Ph.Sh_url@latest
+```
+
 ## 📋 Results
 
 The tool saves the list of unique URLs in the file you specify via the `-o` option, or in `endpoints.txt` by default.
@@ -142,7 +159,7 @@ To update `Ph.Sh_url` to the latest version, simply run the `go install` command
 go install github.com/PhilopaterSh/Ph.Sh_url@latest
 ```
 
-This will download and compile the newest version, replacing your old executable.
+This will download and compile the newest version, replacing your old executable. The tool's version, defined in `main.go`, should be incremented with each significant update or improvement.
 
 To check the currently installed version, use the `-version` flag:
 

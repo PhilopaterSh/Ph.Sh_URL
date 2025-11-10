@@ -38,8 +38,6 @@ const (
 	colorReset  = "\033[0m"
 )
 
-
-
 // isValidDomain checks if a string is a syntactically valid domain name.
 func isValidDomain(domain string) bool {
 	match, _ := regexp.MatchString(`(?i)^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`, domain)
@@ -349,12 +347,12 @@ func getHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 // --- BANNER FUNCTION ---
 func showBanner() {
 	fmt.Println(`
-  _____    _           _____    _     
- |  __ \  | |         / ____|  | |    
- | |__) | | |__      | (___    | |__  
- |  ___/  | '_' \     \___  \  | '_' \ 
- | |      | | | |  _   ____) | | | | |
- |_|      |_| |_| (_) |_____/  |_| |_|
+  _____   _          _____  _     
+ |  __ \ | |        / ____|| |    
+ | |__) || |__     | (___  | |__  
+ |  ___/ | '_' \   \___  \ | '_' \ 
+ | |     | | | | _  ____) || | | |
+ |_|     |_| |_|(_)|_____/ |_| |_|
 Built by : PhilopaterSh
 # LinkedIn: https://www.linkedin.com/in/philopater-shenouda/
                               `)
@@ -474,6 +472,21 @@ func main() {
 	}
 
 	finalUrlSet := make(map[string]struct{})
+	if _, err := os.Stat(*outputFile); err == nil {
+		existingLines, err := readLinesFromFile(*outputFile)
+		if err != nil {
+			if !*silent {
+				log.Printf(colorYellow+"[WARNING] Could not read existing output file: %v"+colorReset, err)
+			}
+		} else {
+			for _, line := range existingLines {
+				finalUrlSet[line] = struct{}{}
+			}
+			if !*silent {
+				log.Printf(colorBlue+"[INFO] Loaded %d existing URLs from %s"+colorReset, len(existingLines), *outputFile)
+			}
+		}
+	}
 	var failedDomains []string // New slice for failed domains
 
 	// --- SIGNAL HANDLING ---
@@ -512,123 +525,121 @@ func main() {
 
 	apiKeyIndex := 0
 	for i, domain := range domains {
-				domain = strings.TrimSpace(domain)
-				if domain == "" {
-					continue
+		domain = strings.TrimSpace(domain)
+		if domain == "" {
+			continue
+		}
+		// Clean the domain line
+		domain = cleanDomainLine(domain)
+		if domain == "" { // Check again if cleaning made it empty
+			if !*silent {
+				log.Printf(colorYellow + "[WARNING] Skipping domain after cleaning resulted in empty string." + colorReset)
+			}
+			continue
+		}
+		// Validate domain format
+		if !isValidDomain(domain) {
+			if !*silent {
+				log.Printf(colorYellow+"[WARNING] Skipping invalid domain format: %s"+colorReset, domain)
+			}
+			continue
+		}
+
+		if !*silent {
+			percentage := float64(i+1) / float64(len(domains)) * 100
+			log.Printf(colorBlue+"[INFO] Processing domain %d/%d (%.2f%%): %s"+colorReset, i+1, len(domains), percentage, domain)
+		}
+		urlChannel := make(chan []string, 4)
+		logChan := make(chan logMessage, 4)
+		var wg sync.WaitGroup
+		var logWg sync.WaitGroup
+		var domainSuccess bool // Flag to track domain success
+
+		logWg.Add(1)
+		go func() {
+			defer logWg.Done()
+			for msg := range logChan {
+				var color string
+				switch msg.Type {
+				case "SUCCESS":
+					color = colorGreen
+				case "ERROR":
+					color = colorRed
+				case "WARNING":
+					color = colorYellow
+				default:
+					color = colorReset
 				}
-				// Clean the domain line
-				domain = cleanDomainLine(domain)
-				if domain == "" { // Check again if cleaning made it empty
-					if !*silent {
-						log.Printf(colorYellow + "[WARNING] Skipping domain after cleaning resulted in empty string." + colorReset)
-					}
-					continue
-				}
-				// Validate domain format
-				if !isValidDomain(domain) {
-					if !*silent {
-						log.Printf(colorYellow+"[WARNING] Skipping invalid domain format: %s"+colorReset, domain)
-					}
-					continue
-				}
-		
+				log.Printf("%s[%s]%s %s", color, msg.Source, colorReset, msg.Message)
+			}
+		}()
+
+		runCount := 0
+		if !excludedMap["vt"] {
+			runCount++
+			wg.Add(1)
+			go getVirusTotalURLs(domain, config.VirusTotalKeys, apiKeyIndex, urlChannel, logChan, &wg, *silent)
+		}
+		if !excludedMap["otx"] {
+			runCount++
+			wg.Add(1)
+			go getAlienVaultURLs(domain, config.AlienVaultKeys, apiKeyIndex, urlChannel, logChan, &wg, *silent)
+		}
+		if !excludedMap["wayback"] {
+			runCount++
+			wg.Add(1)
+			go getWaybackURLs(domain, urlChannel, logChan, &wg, *silent)
+		}
+		if !excludedMap["hr"] {
+			runCount++
+			wg.Add(1)
+			go getHudsonRockURLs(domain, config.HudsonRockKeys, apiKeyIndex, urlChannel, logChan, &wg, *silent)
+		}
+
+		if runCount == 0 {
+			if !*silent {
+				log.Printf(colorBlue+"[INFO] No sources selected for domain: %s"+colorReset, domain)
+			}
+			close(urlChannel)
+			close(logChan)
+		} else {
+			wg.Wait()
+			close(urlChannel)
+			close(logChan)
+		}
+
+		logWg.Wait()
+		for urls := range urlChannel {
+			if urls != nil {
+				domainSuccess = true
+			}
+			for _, u := range urls {
+				finalUrlSet[u] = struct{}{}
+			}
+		}
+
+		if !domainSuccess && runCount > 0 {
+			failedDomains = append(failedDomains, domain)
+		}
+
+		if domainSuccess {
+			err := os.WriteFile(logFileName, []byte(domain), 0644)
+			if err != nil {
 				if !*silent {
-					percentage := float64(i+1) / float64(len(domains)) * 100
-					log.Printf(colorBlue+"[INFO] Processing domain %d/%d (%.2f%%): %s"+colorReset, i+1, len(domains), percentage, domain)
+					log.Printf(colorRed+"[ERROR] Failed to write to log file: %v"+colorReset, err)
 				}
-				urlChannel := make(chan []string, 4)
-				logChan := make(chan logMessage, 4)
-				var wg sync.WaitGroup
-				var logWg sync.WaitGroup
-				var domainSuccess bool // Flag to track domain success
-		
-				logWg.Add(1)
-				go func() {
-					defer logWg.Done()
-					for msg := range logChan {
-						var color string
-						switch msg.Type {
-						case "SUCCESS":
-							color = colorGreen
-						case "ERROR":
-							color = colorRed
-						case "WARNING":
-							color = colorYellow
-						default:
-							color = colorReset
-						}
-						log.Printf("%s[%s]%s %s", color, msg.Source, colorReset, msg.Message)
-					}
-				}()
-		
-				runCount := 0
-				if !excludedMap["vt"] {
-					runCount++
-					wg.Add(1)
-					go getVirusTotalURLs(domain, config.VirusTotalKeys, apiKeyIndex, urlChannel, logChan, &wg, *silent)
-				}
-				if !excludedMap["otx"] {
-					runCount++
-					wg.Add(1)
-					go getAlienVaultURLs(domain, config.AlienVaultKeys, apiKeyIndex, urlChannel, logChan, &wg, *silent)
-				}
-				if !excludedMap["wayback"] {
-					runCount++
-					wg.Add(1)
-					go getWaybackURLs(domain, urlChannel, logChan, &wg, *silent)
-				}
-				if !excludedMap["hr"] {
-					runCount++
-					wg.Add(1)
-					go getHudsonRockURLs(domain, config.HudsonRockKeys, apiKeyIndex, urlChannel, logChan, &wg, *silent)
-				}
-		
-				if runCount == 0 {
-					if !*silent {
-						log.Printf(colorBlue+"[INFO] No sources selected for domain: %s"+colorReset, domain)
-					}
-					close(urlChannel)
-					close(logChan)
-				} else {
-					wg.Wait()
-					close(urlChannel)
-					close(logChan)
-				}
-		
-				logWg.Wait()
-				for urls := range urlChannel {
-					if urls != nil {
-						domainSuccess = true
-					}
-					for _, u := range urls {
-						finalUrlSet[u] = struct{}{}
-					}
-				}
-		
-				if !domainSuccess && runCount > 0 {
-					failedDomains = append(failedDomains, domain)
-				}
-		
-				if domainSuccess {
-					err := os.WriteFile(logFileName, []byte(domain), 0644)
-					if err != nil {
-						if !*silent {
-							log.Printf(colorRed+"[ERROR] Failed to write to log file: %v"+colorReset, err)
-						}
-					}
-				}
-		
-						apiKeyIndex++
-		
-				
-		
-						if i < len(domains)-1 {
-		
-							time.Sleep(requestDelay)
-		
-						}
-		
-					}
+			}
+		}
+
+		apiKeyIndex++
+
+		if i < len(domains)-1 {
+
+			time.Sleep(requestDelay)
+
+		}
+
+	}
 	var finalUrls []string
 	for u := range finalUrlSet {
 		finalUrls = append(finalUrls, u)
