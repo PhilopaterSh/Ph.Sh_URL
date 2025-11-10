@@ -13,6 +13,12 @@
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
 - **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
 
+## 🚀 What's New in v1.1.8
+
+- **Enhanced Resumption Logic**: The tool's ability to resume after an interruption has been tested and confirmed. If the process is stopped, it will now reliably continue from the last successfully processed domain upon restart.
+- **Clarified Output File Behavior**: The tool's file-writing logic has been clarified. It is designed to produce a **complete and unique** list of URLs. At the end of each session (or upon interruption), it loads all previously found URLs, merges them with new findings, removes duplicates, and then **overwrites** the output file with the complete, clean list. This ensures you always have a comprehensive and de-duplicated dataset without manual cleanup.
+- **Version Bump**: The official version is now `1.1.8`.
+
 ## 🎨 Colored Output
 
 `Ph.Sh_URL` now uses colored output to make the logs more readable. The colors are used to indicate the status of the different operations:
@@ -55,11 +61,21 @@ Example of the new progress indication:
 
 `Ph.Sh_URL` supports graceful shutdown. If you interrupt the process (e.g., by pressing `Ctrl+C`), the tool will automatically save all the URLs found up to that point to the output file before exiting. This ensures that you don't lose any data even if you stop the scan midway.
 
-## 💾 Logging and Resuming
+## 💾 Logging, Resuming, and File Writing
 
-`Ph.Sh_URL` now supports logging its progress and resuming from where it left off. If the script is interrupted, it saves the last successfully processed domain to a log file. Upon restart, it checks this log file and continues processing from the next domain in the list. Once the entire process is complete, the log file is automatically deleted.
+`Ph.Sh_URL` is designed to be resilient and prevent data loss between sessions.
 
-Furthermore, to prevent data loss between sessions, `Ph.Sh_URL` now loads any existing URLs from the specified output file at startup. This means that if you run the tool multiple times, targeting the same output file, the results will be merged, and you won't lose the data from previous scans. The final output will be a unique collection of all URLs found across all sessions.
+### Logging and Resuming
+The tool logs its progress by saving the last successfully processed domain to a log file (`Ph.Sh_URL.log`). If the script is interrupted, it can be restarted and will automatically resume from the next domain in the list. Once the entire process is complete, the log file is automatically deleted.
+
+### Output File Handling
+To ensure a clean and unique final list, the tool follows a specific procedure for writing to the output file (e.g., `endpoints.txt`):
+1.  **Load Existing Data**: At startup, the tool reads all URLs from the existing output file into memory.
+2.  **Gather New Data**: It then processes the domains and collects new URLs.
+3.  **Merge and De-duplicate**: All URLs (old and new) are merged, and duplicates are removed.
+4.  **Overwrite with Complete Set**: Finally, the tool **overwrites** the output file with the complete, unique set of URLs.
+
+This process guarantees that even if you stop and start the tool multiple times, you will not lose any data. The final output file will always contain a comprehensive, de-duplicated collection of all URLs found across all runs.
 
 ##  Data Sources
 

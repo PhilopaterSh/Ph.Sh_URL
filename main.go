@@ -27,7 +27,7 @@ const (
 	retryDelay     = 5 * time.Second
 	logFileName    = "Ph.Sh_URL.log"
 
-	version = "1.1.6" // Tool version
+	version = "1.1.8" // Tool version
 )
 
 const (
