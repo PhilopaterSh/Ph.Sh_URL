@@ -6,11 +6,15 @@
 
 ## 🛠️ Technology Stack
 
+<div align="center">
+
 ![Language](https://img.shields.io/badge/Language-Go-blue.svg)
 ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg)
 ![Program Version](https://img.shields.io/badge/Version-1.1.8-blue.svg)
 ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+
+</div>
 
 ##  Features
 
