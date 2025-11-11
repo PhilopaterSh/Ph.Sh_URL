@@ -135,56 +135,66 @@ hudsonrock:
 
 ### 2. Installation
 
-To install the tool, ensure you have Go installed (version 1.16 or higher). Then, run the following command:
+There are two ways to install `Ph.Sh_URL`. The recommended method is to build from the source, as it guarantees you are using the latest version.
 
+**Method 1: Build from Source (Recommended)**
+
+This method avoids potential caching issues with Go's module proxy and ensures you have the most up-to-date version.
+
+**Step 1: Clone the Repository**
+
+First, clone the GitHub repository to your local machine:
+```bash
+git clone https://github.com/PhilopaterSh/Ph.Sh_url.git
+```
+
+**Step 2: Navigate to the Directory**
+
+Go into the cloned directory:
+```bash
+cd Ph.Sh_url
+```
+
+**Step 3: Build the Tool**
+
+Next, build the tool using the `go build` command. This will create a binary named `Ph.Sh_url` (or `Ph.Sh_url.exe` on Windows) in the current directory.
+```bash
+go build
+```
+
+**Step 4: Verify the Version**
+
+After building, verify that you have the latest version by running:
+```bash
+./Ph.Sh_url -version
+```
+The output should match the latest version listed in the [release notes](https://github.com/PhilopaterSh/Ph.Sh_url/releases).
+
+**Step 5: Make it Globally Accessible (Optional)**
+
+To run `Ph.Sh_url` from any directory, move the binary to a directory in your system's `PATH`. For example, on Linux or macOS:
+```bash
+sudo mv Ph.Sh_url /usr/local/bin/
+```
+On Windows, you can move `Ph.Sh_url.exe` to a folder that is included in your `Path` environment variable.
+
+**Method 2: Using `go install` (Alternative)**
+
+This method is faster but may install an outdated version due to caching in Go's module proxy. If you encounter issues, please use the "Build from Source" method instead.
+
+To install, run the following command:
 ```bash
 go install github.com/PhilopaterSh/Ph.Sh_url@latest
 ```
 
-This command will compile the source code and place the executable (`Ph.Sh_url` or `Ph.Sh_url.exe` on Windows) in your `$GOPATH/bin` directory.
-
-To make it globally accessible on Linux systems (like Kali Linux), you might want to move it to a common bin directory:
-
-```bash
-sudo mv "$(go env GOPATH)/bin/Ph.Sh_url" /usr/local/bin/
-```
-
-This ensures you can run `Ph.Sh_url` from any directory.
-
-### 3. How to Use
-
-You can use the tool in several ways:
-
-**a) Via a file:**
-```bash
-Ph.Sh_url -d domains.txt -o found_urls.txt
-```
-
-**b) Via Standard Input (stdin):**
-```bash
-cat domains.txt | Ph.Sh_url -o all_urls.txt
-```
-
-**c) Silent Mode (to display results only):**
-```bash
-cat domains.txt | Ph.Sh_url -silent | tee urls.txt
-```
-
-**Usage Options:**
-- `-d`: Path to the domains file (optional if using stdin).
-- `-o`: Path to the output file (default: `endpoints.txt`).
-- `-silent`: To enable silent mode.
-- `-e`: Comma-separated list of sources to exclude (e.g., `vt,hr`). Available sources: `vt` (VirusTotal), `otx` (AlienVault OTX), `wayback` (The Wayback Machine), `hr` (Hudson Rock).
-
-## 🔧 Troubleshooting
-
-### Version not updating after `go install`
-
-Due to caching in Go's module proxy, `go install` might not immediately fetch the latest tagged version. If you run `go install ...@latest` and see an older version being installed, you can bypass the proxy by using the `GOPRIVATE` environment variable:
-
+If `go install` fetches an older version, you can try to bypass the proxy cache with the following command. However, this is not guaranteed to work.
 ```bash
 GOPRIVATE=github.com/PhilopaterSh/Ph.Sh_url go install github.com/PhilopaterSh/Ph.Sh_url@latest
 ```
+
+After installation, the binary will be located in your `$GOPATH/bin` directory. You may need to move it to a globally accessible location, as shown in "Step 5" of the recommended method.
+
+### 3. How to Use
 
 ## 📋 Results
 
