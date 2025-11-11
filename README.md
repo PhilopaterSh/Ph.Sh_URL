@@ -1,6 +1,18 @@
 # Ph.Sh_URL - Reconnaissance and URL Collection Tool
 
-`Ph.Sh_URL` is an open-source intelligence (OSINT) tool written in Go, designed to collect and discover URLs associated with a specific domain by searching multiple data sources concurrently.
+## 📖 About The Tool
+
+`Ph.Sh_URL` is a powerful and concurrent open-source intelligence (OSINT) tool built with Go. It is designed for security researchers, penetration testers, and bug bounty hunters to automate the process of URL discovery. The tool systematically queries multiple online sources to gather a comprehensive list of URLs associated with one or more target domains, helping to uncover a wider attack surface.
+
+## 🛠️ Technology Stack
+
+| Technology | Version/Details |
+| :--- | :--- |
+| **Language** | ![Language](https://img.shields.io/badge/Language-Go-blue.svg) |
+| **Go Version** | ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg) |
+| **Program Version** | ![Program Version](https://img.shields.io/badge/Version-1.1.8-blue.svg) |
+| **Dependencies** | ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg) |
+| **License** | ![License](https://img.shields.io/badge/License-MIT-green.svg) |
 
 ##  Features
 
