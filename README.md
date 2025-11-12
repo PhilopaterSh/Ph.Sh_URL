@@ -13,6 +13,21 @@
 
 </div>
 
+## 📜 Table of Contents
+
+- [🛠️ Technology Stack](#️-technology-stack)
+- [✨ Features](#-features)
+- [🚀 What's New in v1.1.8](#-whats-new-in-v118)
+- [🎨 Colored Output](#-colored-output)
+- [📈 Progress and Timer](#-progress-and-timer)
+- [🚦 Graceful Shutdown](#-graceful-shutdown)
+- [💾 Logging, Resuming, and File Writing](#-logging-resuming-and-file-writing)
+- [📚 Data Sources](#-data-sources)
+- [🛠️ Setup and Usage](#️-setup-and-usage)
+- [👨‍💻 How to Use](#-how-to-use)
+- [📋 Results](#-results)
+- [🔄 Updating the Tool](#-updating-the-tool)
+
 ## 🛠️ Technology Stack
 
 <div align="center">
@@ -25,7 +40,7 @@
 
 </div>
 
-##  Features
+## ✨ Features
 
 - **Multiple Sources**: Gathers data from 4 different sources to ensure broad coverage.
 - **High Performance**: Utilizes Go's Goroutines technology to execute searches in parallel for different sources *within a single domain*, providing superior speed for each domain's lookup.
@@ -100,7 +115,7 @@ To ensure a clean and unique final list, the tool follows a specific procedure f
 
 This process guarantees that even if you stop and start the tool multiple times, you will not lose any data. The final output file will always contain a comprehensive, de-duplicated collection of all URLs found across all runs.
 
-##  Data Sources
+## 📚 Data Sources
 
 The tool relies on the following sources:
 
@@ -111,7 +126,7 @@ The tool relies on the following sources:
 
 ---
 
-##  Setup and Usage
+## 🛠️ Setup and Usage
 
 ### 1. First-time Setup
 
@@ -168,6 +183,16 @@ After building, verify that you have the latest version by running:
 ```bash
 ./Ph.Sh_url -version
 ```
+
+## 🙏 Support My Work
+
+If you find my work useful, please consider supporting me. It helps me to dedicate more time to open-source projects.
+
+<div align="center">
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="50">](https://www.buymeacoffee.com/PhilopaterSh)
+
+</div>
 The output should match the latest version listed in the [release notes](https://github.com/PhilopaterSh/Ph.Sh_url/releases).
 
 **Step 5: Make it Globally Accessible (Optional)**
@@ -195,6 +220,25 @@ GOPRIVATE=github.com/PhilopaterSh/Ph.Sh_url go install github.com/PhilopaterSh/P
 After installation, the binary will be located in your `$GOPATH/bin` directory. You may need to move it to a globally accessible location, as shown in "Step 5" of the recommended method.
 
 ### 3. How to Use
+
+`Ph.Sh_URL` is designed to be flexible, allowing you to provide target domains either through a file or directly via standard input (stdin).
+
+### Command-Line Options
+
+| Flag      | Description                                                                                                  | Example                                               |
+| --------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `-d`      | Provide a file containing a list of domains, one per line.                                                   | `./Ph.Sh_url -d domains.txt`                          |
+| `-o`      | Specify a custom output file for the results. (Default: `endpoints.txt`)                                     | `./Ph.Sh_url -d domains.txt -o my_urls.txt`           |
+| `-silent` | Suppress all informational and error messages, printing only the discovered URLs to standard output.         | `./Ph.Sh_url -d domains.txt -silent > found_urls.txt` |
+| `-e`      | Exclude specific data sources (comma-separated: `vt`, `otx`, `wayback`, `hr`).                                | `./Ph.Sh_url -d domains.txt -e vt,hr`                 |
+| `-version`| Display the installed version of `Ph.Sh_URL`.                                                                | `./Ph.Sh_url -version`                                |
+
+### Full Example
+
+```bash
+# Process domains from 'targets.txt', exclude Wayback Machine, save results to 'output_urls.txt', and run silently
+./Ph.Sh_url -d targets.txt -e wayback -o output_urls.txt -silent
+```
 
 ## 📋 Results
 
