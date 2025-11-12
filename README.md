@@ -184,14 +184,6 @@ After building, verify that you have the latest version by running:
 ./Ph.Sh_url -version
 ```
 
-## 🙏 Support My Work
-
-If you find my work useful, please consider supporting me. It helps me to dedicate more time to open-source projects.
-
-<div align="center">
-
-[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="50">](https://www.buymeacoffee.com/PhilopaterSh)
-
 </div>
 The output should match the latest version listed in the [release notes](https://github.com/PhilopaterSh/Ph.Sh_url/releases).
 
@@ -259,3 +251,11 @@ To check the currently installed version, use the `-version` flag:
 ```bash
 Ph.Sh_url -version
 ```
+
+## 🙏 Support My Work
+
+If you find my work useful, please consider supporting me. It helps me to dedicate more time to open-source projects.
+
+<div align="center">
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="50">](https://www.buymeacoffee.com/PhilopaterSh)
