@@ -2,6 +2,12 @@
 
 <div align="center">
 
+<img src="PhilopaterSh_URL.png" alt="Tool Banner">
+
+<br>
+
+<a href="https://youtu.be/C0rkldC5j_I"><img src="https://img.shields.io/badge/Watch_Demo-red?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube"></a>
+
 ## 📖 About The Tool
 
 `Ph.Sh_URL` is a powerful and concurrent open-source intelligence (OSINT) tool built with Go. It is designed for security researchers, penetration testers, and bug bounty hunters to automate the process of URL discovery. The tool systematically queries multiple online sources to gather a comprehensive list of URLs associated with one or more target domains, helping to uncover a wider attack surface.

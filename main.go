@@ -347,10 +347,10 @@ func getHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 // --- BANNER FUNCTION ---
 func showBanner() {
 	fmt.Println(`
-  _____   _          _____  _     
- |  __ \ | |        / ____|| |    
- | |__) || |__     | (___  | |__  
- |  ___/ | '_' \   \___  \ | '_' \ 
+  _____   _           ____  _     
+ |  __ \ | |         / ___|| |    
+ | |__) || |__      | (___ | |__  
+ |  ___/ | '_' \    \___  \| '_' \ 
  | |     | | | | _  ____) || | | |
  |_|     |_| |_|(_)|_____/ |_| |_|
 Built by : PhilopaterSh
