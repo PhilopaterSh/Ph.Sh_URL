@@ -111,7 +111,7 @@ Example of the new progress indication:
 `Ph.Sh_URL` is designed to be resilient and prevent data loss between sessions.
 
 ### Logging and Resuming
-The tool logs its progress by saving the last successfully processed domain to a log file (`Ph.Sh_URL.log`). If the script is interrupted, it can be restarted and will automatically resume by re-processing the last successfully completed domain. This ensures that no domain is partially scanned if an interruption occurs. Once the entire process is complete, the log file is automatically deleted.
+The tool logs its progress by saving the last successfully processed domain to a log file (`Ph.Sh_URL.log`). If the script is interrupted, it can be restarted and will automatically resume by re-processing the last successfully completed domain. This ensures that no domain is partially scanned if an interruption occurs.
 
 ### Output File Handling
 To ensure a clean and unique final list, the tool follows a specific procedure for writing to the output file (e.g., `endpoints.txt`):
