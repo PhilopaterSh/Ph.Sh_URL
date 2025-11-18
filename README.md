@@ -16,6 +16,7 @@
 <a href="https://www.linkedin.com/in/philopater-shenouda/"><img src="https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
 <a href="https://twitter.com/PhilopaterSh"><img src="https://img.shields.io/badge/X-black?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
 <a href="https://medium.com/@PhilopaterSh"><img src="https://img.shields.io/badge/Medium-black?style=for-the-badge&logo=medium&logoColor=white" alt="Medium"></a>
+<a href="https://medium.com/@PhilopaterSh/introducing-ph-sh-url-your-new-go-to-osint-tool-for-url-discovery-709f1036e56f"><img src="https://img.shields.io/badge/Read_Article-black?style=for-the-badge&logo=medium&logoColor=white" alt="Medium Article"></a>
 
 </div>
 
@@ -23,7 +24,7 @@
 
 - [🛠️ Technology Stack](#️-technology-stack)
 - [✨ Features](#-features)
-- [🚀 What's New in v1.1.8](#-whats-new-in-v118)
+- [🚀 What's New in v1.1.9](#-whats-new-in-v118)
 - [🎨 Colored Output](#-colored-output)
 - [📈 Progress and Timer](#-progress-and-timer)
 - [🚦 Graceful Shutdown](#-graceful-shutdown)
@@ -40,7 +41,7 @@
 
 ![Language](https://img.shields.io/badge/Language-Go-blue.svg)
 ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg)
-![Program Version](https://img.shields.io/badge/Version-1.1.8-blue.svg)
+![Program Version](https://img.shields.io/badge/Version-1.1.9-blue.svg)
 ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -57,11 +58,11 @@
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
 - **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
 
-## 🚀 What's New in v1.1.8
+## 🚀 What's New in v1.1.9
 
-- **Enhanced Resumption Logic**: The tool's ability to resume after an interruption has been tested and confirmed. If the process is stopped, it will now reliably continue from the last successfully processed domain upon restart.
+- **Enhanced Resumption Logic**: The tool's resume logic has been updated. If the process is stopped, it will now restart by re-processing the last successfully completed domain, ensuring that no scan is left incomplete.
 - **Clarified Output File Behavior**: The tool's file-writing logic has been clarified. It is designed to produce a **complete and unique** list of URLs. At the end of each session (or upon interruption), it loads all previously found URLs, merges them with new findings, removes duplicates, and then **overwrites** the output file with the complete, clean list. This ensures you always have a comprehensive and de-duplicated dataset without manual cleanup.
-- **Version Bump**: The official version is now `1.1.8`.
+- **Version Bump**: The official version is now `1.1.9`.
 
 ## 🎨 Colored Output
 
@@ -110,7 +111,7 @@ Example of the new progress indication:
 `Ph.Sh_URL` is designed to be resilient and prevent data loss between sessions.
 
 ### Logging and Resuming
-The tool logs its progress by saving the last successfully processed domain to a log file (`Ph.Sh_URL.log`). If the script is interrupted, it can be restarted and will automatically resume from the next domain in the list. Once the entire process is complete, the log file is automatically deleted.
+The tool logs its progress by saving the last successfully processed domain to a log file (`Ph.Sh_URL.log`). If the script is interrupted, it can be restarted and will automatically resume by re-processing the last successfully completed domain. This ensures that no domain is partially scanned if an interruption occurs. Once the entire process is complete, the log file is automatically deleted.
 
 ### Output File Handling
 To ensure a clean and unique final list, the tool follows a specific procedure for writing to the output file (e.g., `endpoints.txt`):

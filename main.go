@@ -27,7 +27,7 @@ const (
 	retryDelay     = 5 * time.Second
 	logFileName    = "Ph.Sh_URL.log"
 
-	version = "1.1.8" // Tool version
+	version = "1.1.9" // Tool version
 )
 
 const (
@@ -398,6 +398,8 @@ func writeLinesToFile(path string, lines []string) error {
 
 // --- MAIN LOGIC ---
 func main() {
+
+
 	log.SetFlags(0) // Remove default log flags (including timestamp)
 
 	outputFile := flag.String("o", "endpoints.txt", "Path to the output file.")
@@ -449,12 +451,11 @@ func main() {
 			if lastProcessedDomain != "" {
 				for i, domain := range domains {
 					if domain == lastProcessedDomain {
-						if !*silent {
-							log.Printf(colorBlue+"[INFO] Resuming from domain after: %s"+colorReset, domain)
-						}
-						domains = domains[i+1:]
-						break
-					}
+											if !*silent {
+												log.Printf(colorBlue+"[INFO] Resuming from domain: %s"+colorReset, domain)
+											}
+											domains = domains[i:]
+											break					}
 				}
 			}
 		}
@@ -561,12 +562,16 @@ func main() {
 			for msg := range logChan {
 				var color string
 				switch msg.Type {
-				case "SUCCESS":
-					color = colorGreen
-				case "ERROR":
-					color = colorRed
+				case "INFO":
+					color = colorBlue
 				case "WARNING":
 					color = colorYellow
+				case "ERROR":
+					color = colorRed
+				case "FATAL":
+					color = colorRed
+				case "SUCCESS":
+					color = colorGreen
 				default:
 					color = colorReset
 				}
@@ -665,8 +670,5 @@ func main() {
 		log.Printf(colorGreen+"[SUCCESS] All done! Found %d unique URLs. Results saved to %s"+colorReset, len(finalUrls), *outputFile)
 	}
 
-	// Clean up the log file
-	if _, err := os.Stat(logFileName); err == nil {
-		os.Remove(logFileName)
-	}
+
 }
