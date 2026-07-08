@@ -1,4 +1,4 @@
-package main
+package domain
 
 import "testing"
 
@@ -20,8 +20,8 @@ func TestIsValidDomain(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if got := isValidDomain(c.domain); got != c.want {
-			t.Errorf("isValidDomain(%q) = %v, want %v", c.domain, got, c.want)
+		if got := IsValidDomain(c.domain); got != c.want {
+			t.Errorf("IsValidDomain(%q) = %v, want %v", c.domain, got, c.want)
 		}
 	}
 }
@@ -39,17 +39,8 @@ func TestCleanDomainLine(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if got := cleanDomainLine(c.input); got != c.want {
-			t.Errorf("cleanDomainLine(%q) = %q, want %q", c.input, got, c.want)
+		if got := CleanDomainLine(c.input); got != c.want {
+			t.Errorf("CleanDomainLine(%q) = %q, want %q", c.input, got, c.want)
 		}
-	}
-}
-
-func TestFilterPlaceholderKeys(t *testing.T) {
-	input := []string{"YOUR_VT_API_KEY_1", "", "  ", "real-key-123", "YOUR_OTX_API_KEY_1"}
-	got := filterPlaceholderKeys(input)
-
-	if len(got) != 1 || got[0] != "real-key-123" {
-		t.Errorf("filterPlaceholderKeys(%v) = %v, want [real-key-123]", input, got)
 	}
 }
