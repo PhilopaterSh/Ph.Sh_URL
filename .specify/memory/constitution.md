@@ -1,50 +1,63 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Ph.Sh_URL Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Single-Binary CLI, No Runtime Dependencies
+`Ph.Sh_url` ships as one self-contained Go binary. No external runtime (Docker, Python, Node)
+is required to run it; the only dependency is `gopkg.in/yaml.v3` for config parsing. Keep it
+this way — new features must not require a database, daemon, or additional installed tool to
+run the core scan.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Never Lose Collected Data
+The tool's core promise is that a scan can be interrupted (Ctrl+C, crash, network loss) without
+losing previously found URLs. Any change touching `finalUrlSet`, `failedDomains`, the log file,
+or the interrupt handler MUST preserve: (a) atomic-enough writes so a partial write doesn't
+corrupt `endpoints.txt`, and (b) safe concurrent access — no goroutine may read/write shared
+scan state without holding `resultsMu`.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Graceful Degradation Per Source
+Each data source (VirusTotal, AlienVault OTX, Wayback Machine, Hudson Rock) must fail
+independently: a missing API key, a source outage, or a rate limit on one source must never
+abort the scan for the other sources or for other domains. Prefer logging a warning and
+returning an empty result over `log.Fatal`.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Test-First for Pure Logic (NON-NEGOTIABLE)
+Any function with no I/O side effects (domain validation/cleaning, key filtering, URL
+deduplication logic, etc.) MUST have unit tests in the corresponding `_test.go` file before
+being considered done. Functions that do network I/O are exempt from unit testing but must be
+reviewed for correct error handling and resource cleanup (closed response bodies, no goroutine
+leaks).
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. CI Is the Merge Gate
+`go build ./...`, `go vet ./...`, and `go test ./...` MUST pass in CI
+(`.github/workflows/ci.yml`) before a change is considered mergeable to `main`. Do not bypass
+CI failures by weakening tests or `vet` findings — fix the underlying issue.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Versioning & Releases
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Version format: `MAJOR.MINOR.PATCH`, tracked in the `version` constant in `main.go` and
+  mirrored in the README badge and "What's New" section.
+- Every release gets an annotated git tag (`vX.Y.Z`) and a corresponding GitHub Release with
+  notes summarizing user-visible changes and bug fixes.
+- Breaking changes to CLI flags or `config.yaml` structure require a MAJOR bump.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- New features and non-trivial fixes go through spec-kit: `/speckit-specify` → `/speckit-plan`
+  → `/speckit-tasks` → `/speckit-implement`, with specs stored under `specs/NNN-short-name/`.
+- Small, obvious bug fixes (typos, off-by-one, clearly-scoped correctness fixes) may be applied
+  directly without a full spec, but should still be covered by a test where the bug is in pure
+  logic.
+- Keep `main.go` as a single file only as long as it stays readable; if/when it grows
+  significantly, splitting into packages (e.g. `sources/`, `config/`) is an explicit
+  architectural decision that should go through `/speckit-specify`, not an incidental
+  refactor bundled into an unrelated change.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution reflects how `Ph.Sh_URL` is actually maintained as of v1.2.0. Amendments
+should be made when a real decision changes (e.g. adding a new data source, changing the
+concurrency model) — update this file in the same change that makes the decision, not
+separately.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-07-08 | **Last Amended**: 2026-07-08
