@@ -24,7 +24,8 @@
 
 - [🛠️ Technology Stack](#️-technology-stack)
 - [✨ Features](#-features)
-- [🚀 What's New in v1.1.9](#-whats-new-in-v118)
+- [🚀 What's New in v1.2.0](#-whats-new-in-v120)
+- [🚀 What's New in v1.1.9](#-whats-new-in-v119)
 - [🎨 Colored Output](#-colored-output)
 - [📈 Progress and Timer](#-progress-and-timer)
 - [🚦 Graceful Shutdown](#-graceful-shutdown)
@@ -41,7 +42,7 @@
 
 ![Language](https://img.shields.io/badge/Language-Go-blue.svg)
 ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg)
-![Program Version](https://img.shields.io/badge/Version-1.1.9-blue.svg)
+![Program Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)
 ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -57,6 +58,13 @@
 - **Silent Mode**: The `-silent` option prints only URLs, ideal for scripting. When not in silent mode, logging output is concise, without timestamps, with simplified source-specific messages, and includes a domain counter (e.g., `Processing domain 5/100: example.com`).
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
 - **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
+
+## 🚀 What's New in v1.2.0
+
+- **Fixed a response-body leak**: The AlienVault OTX pagination loop now closes each page's HTTP response as soon as it's read, instead of deferring all closes until the whole domain finished paginating.
+- **Fixed a data race**: URL results and failed-domain tracking are now guarded by a mutex, since both the main scan loop and the Ctrl+C interrupt handler could touch them concurrently.
+- **Placeholder API keys are now ignored**: If `config.yaml` still has the default `YOUR_..._API_KEY_1` placeholders, those sources are treated as keyless instead of sending invalid keys on every request.
+- **Added a test suite and CI**: `main_test.go` covers domain validation/cleaning and key filtering; a GitHub Actions workflow now runs `go build`, `go vet`, and `go test` on every push and PR.
 
 ## 🚀 What's New in v1.1.9
 

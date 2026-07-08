@@ -2,3 +2,6 @@ endpoints.txt
 Ph.Sh_URL.exe
 Ph.Sh_URL
 main.exe
+Ph.Sh_URL.log
+failed_domains.txt
+.claude/settings.local.json

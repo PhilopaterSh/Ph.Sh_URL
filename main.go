@@ -27,7 +27,7 @@ const (
 	retryDelay     = 5 * time.Second
 	logFileName    = "Ph.Sh_URL.log"
 
-	version = "1.1.9" // Tool version
+	version = "1.2.0" // Tool version
 )
 
 const (
@@ -119,7 +119,26 @@ func loadConfig(silent bool) (*Config, error) {
 		return nil, fmt.Errorf("could not parse config file: %w", err)
 	}
 
+	config.VirusTotalKeys = filterPlaceholderKeys(config.VirusTotalKeys)
+	config.AlienVaultKeys = filterPlaceholderKeys(config.AlienVaultKeys)
+	config.HudsonRockKeys = filterPlaceholderKeys(config.HudsonRockKeys)
+
 	return &config, nil
+}
+
+// filterPlaceholderKeys removes empty keys and unedited placeholder values
+// (e.g. "YOUR_VT_API_KEY_1") left over from the default config template,
+// so sources fall back to keyless mode instead of sending invalid keys.
+func filterPlaceholderKeys(keys []string) []string {
+	var valid []string
+	for _, k := range keys {
+		k = strings.TrimSpace(k)
+		if k == "" || strings.HasPrefix(k, "YOUR_") {
+			continue
+		}
+		valid = append(valid, k)
+	}
+	return valid
 }
 
 func createDefaultConfig(path string) error {
@@ -240,9 +259,9 @@ func getAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan
 			}
 			break
 		}
-		defer resp.Body.Close()
 
 		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		var r AlienVaultResponse
 		json.Unmarshal(body, &r)
 		for _, item := range r.URLList {
@@ -489,6 +508,7 @@ func main() {
 		}
 	}
 	var failedDomains []string // New slice for failed domains
+	var resultsMu sync.Mutex   // Guards finalUrlSet and failedDomains, shared with the main loop below
 
 	// --- SIGNAL HANDLING ---
 	sigChan := make(chan os.Signal, 1)
@@ -500,20 +520,23 @@ func main() {
 			log.Println(colorYellow + "\n[WARNING] Interrupt signal received. Saving results..." + colorReset)
 		}
 
+		resultsMu.Lock()
 		var finalUrls []string
 		for u := range finalUrlSet {
 			finalUrls = append(finalUrls, u)
 		}
+		failedCopy := append([]string(nil), failedDomains...)
+		resultsMu.Unlock()
 
 		if err := writeLinesToFile(*outputFile, finalUrls); err != nil {
 			log.Fatalf(colorRed+"[FATAL] Failed to write URLs on interrupt: %v"+colorReset, err)
 		}
 
-		if len(failedDomains) > 0 {
+		if len(failedCopy) > 0 {
 			if !*silent {
-				log.Printf(colorYellow+"[WARNING] %d domains failed to process and were saved to failed_domains.txt"+colorReset, len(failedDomains))
+				log.Printf(colorYellow+"[WARNING] %d domains failed to process and were saved to failed_domains.txt"+colorReset, len(failedCopy))
 			}
-			if err := writeLinesToFile("failed_domains.txt", failedDomains); err != nil {
+			if err := writeLinesToFile("failed_domains.txt", failedCopy); err != nil {
 				log.Fatalf(colorRed+"[FATAL] Failed to write failed domains to file: %v"+colorReset, err)
 			}
 		}
@@ -614,6 +637,7 @@ func main() {
 		}
 
 		logWg.Wait()
+		resultsMu.Lock()
 		for urls := range urlChannel {
 			if urls != nil {
 				domainSuccess = true
@@ -626,6 +650,7 @@ func main() {
 		if !domainSuccess && runCount > 0 {
 			failedDomains = append(failedDomains, domain)
 		}
+		resultsMu.Unlock()
 
 		if domainSuccess {
 			err := os.WriteFile(logFileName, []byte(domain), 0644)
@@ -645,16 +670,19 @@ func main() {
 		}
 
 	}
+	resultsMu.Lock()
 	var finalUrls []string
 	for u := range finalUrlSet {
 		finalUrls = append(finalUrls, u)
 	}
+	failedCopy := append([]string(nil), failedDomains...)
+	resultsMu.Unlock()
 
-	if len(failedDomains) > 0 {
+	if len(failedCopy) > 0 {
 		if !*silent {
-			log.Printf(colorYellow+"[WARNING] %d domains failed to process and were saved to failed_domains.txt"+colorReset, len(failedDomains))
+			log.Printf(colorYellow+"[WARNING] %d domains failed to process and were saved to failed_domains.txt"+colorReset, len(failedCopy))
 		}
-		if err := writeLinesToFile("failed_domains.txt", failedDomains); err != nil {
+		if err := writeLinesToFile("failed_domains.txt", failedCopy); err != nil {
 			log.Fatalf(colorRed+"[FATAL] Failed to write failed domains to file: %v"+colorReset, err)
 		}
 	}
