@@ -95,5 +95,5 @@ hudsonrock:
   - "YOUR_HUDSONROCK_API_KEY_1"
 `
 
-	return os.WriteFile(path, []byte(defaultConfig), 0644)
+	return os.WriteFile(path, []byte(defaultConfig), 0600) // file holds API keys — owner-only
 }

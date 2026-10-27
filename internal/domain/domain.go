@@ -7,16 +7,27 @@ import (
 	"strings"
 )
 
+// isValidDomainPattern matches registrable domains, allowing punycode TLDs
+// (e.g. example.xn--p1ai).
+var isValidDomainPattern = regexp.MustCompile(`(?i)^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+([a-z]{2,}|xn--[a-z0-9-]+)$`)
+
 // IsValidDomain checks if a string is a syntactically valid domain name.
 func IsValidDomain(domain string) bool {
-	match, _ := regexp.MatchString(`(?i)^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$`, domain)
-	return match
+	return isValidDomainPattern.MatchString(domain)
 }
 
-// CleanDomainLine removes invalid characters from a domain string.
+// CleanDomainLine extracts the domain candidate from a raw input line. It
+// keeps only the leading run of domain-legal characters, so lines like
+// "example.com,other.com" or "example.com/extra" never fuse into a bogus
+// domain such as "example.comextra" (which used to pass validation).
 func CleanDomainLine(line string) string {
-	// This regex removes anything that is not a letter, number, dot, or hyphen.
-	reg := regexp.MustCompile(`[^a-zA-Z0-9.-]`)
-	cleaned := reg.ReplaceAllString(line, "")
-	return strings.TrimSpace(cleaned)
+	line = strings.TrimSpace(line)
+	for i, r := range line {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '-' {
+			continue
+		}
+		line = line[:i]
+		break
+	}
+	return strings.Trim(line, ".-")
 }

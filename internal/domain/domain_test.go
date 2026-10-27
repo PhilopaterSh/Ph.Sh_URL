@@ -10,6 +10,7 @@ func TestIsValidDomain(t *testing.T) {
 		{"example.com", true},
 		{"sub.example.com", true},
 		{"a.co", true},
+		{"example.xn--p1ai", true},
 		{"example", false},
 		{"-example.com", false},
 		{"example-.com", false},
@@ -34,7 +35,10 @@ func TestCleanDomainLine(t *testing.T) {
 		{"example.com", "example.com"},
 		{"  example.com  ", "example.com"},
 		{"example.com!", "example.com"},
-		{"exa*mple.com", "example.com"},
+		{"example.com.", "example.com"},
+		{"example.com/extra", "example.com"},
+		{"a.com,b.com", "a.com"},
+		{"exa*mple.com", "exa"}, // cut at '*' — must NOT fuse into a bogus "example.com"
 		{"", ""},
 	}
 
