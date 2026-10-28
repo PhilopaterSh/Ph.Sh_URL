@@ -62,6 +62,7 @@
 
 ## 🚀 What's New in v1.2.2
 
+- **4xx client errors now fail fast for real**: the v1.2.1 retry rewrite still decoded 401/403/404 bodies as data; a new network-layer regression test caught it, and 4xx (except 429, which retries) now returns a clear error as documented.
 - **"Scanned successfully, found nothing" is no longer a failure**: every source now reports its outcome explicitly (`Result{URLs, Err}`). Previously a successful scan returning zero URLs was indistinguishable from a crashed one, so such domains landed in `failed_domains.txt` and were re-scanned on every resume.
 - **VirusTotal without a key is now explicit**: it logs `No API key configured — skipping source` and counts as not-scanned instead of failing silently.
 - **Response read/decode errors are handled**: truncated or malformed JSON no longer silently becomes "Found 0 URLs".

@@ -12,11 +12,13 @@ import (
 
 const (
 	retryAttempts = 3
-	retryDelay    = 5 * time.Second
 	// requestTimeout bounds every request: http.DefaultClient has no timeout,
 	// so one stalled connection would hang the whole tool forever.
 	requestTimeout = 30 * time.Second
 )
+
+// retryDelay is a var so tests can shorten the backoff.
+var retryDelay = 5 * time.Second
 
 // httpClient is the shared HTTP client used by every source.
 var httpClient = &http.Client{Timeout: requestTimeout}
@@ -35,8 +37,14 @@ func MakeRequestWithRetry(req *http.Request, silent bool, logChan chan<- logging
 		} else if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			lastErr = fmt.Errorf("server returned status: %s", resp.Status)
 			resp.Body.Close()
+		} else if resp.StatusCode >= 400 {
+			// Permanent client error (401/403/404/...): fail fast with a
+			// clear message instead of letting the caller decode an error
+			// body as data.
+			resp.Body.Close()
+			return nil, fmt.Errorf("server returned status: %s", resp.Status)
 		} else {
-			// 2xx/3xx (and any 4xx status the client chose to accept as data)
+			// 2xx/3xx — success
 			return resp, nil
 		}
 
