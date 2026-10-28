@@ -18,10 +18,9 @@ import (
 )
 
 const (
-	requestDelay = 20 * time.Second
-	logFileName  = "Ph.Sh_URL.log"
+	logFileName = "Ph.Sh_URL.log"
 
-	version = "1.2.2" // Tool version
+	version = "1.2.3" // Tool version
 )
 
 // --- BANNER FUNCTION ---
@@ -76,6 +75,31 @@ func writeLinesToFile(path string, lines []string) error {
 	return w.Flush()
 }
 
+// normalizeDomains cleans, validates and de-duplicates raw input lines into
+// the final list of scannable targets.
+func normalizeDomains(lines []string, silent bool) []string {
+	targets := make([]string, 0, len(lines))
+	seen := make(map[string]struct{})
+	for _, line := range lines {
+		d := strings.ToLower(domain.CleanDomainLine(strings.TrimSpace(line)))
+		if d == "" {
+			continue
+		}
+		if !domain.IsValidDomain(d) {
+			if !silent {
+				log.Printf(logging.ColorYellow+"[WARNING] Skipping invalid domain format: %s"+logging.ColorReset, d)
+			}
+			continue
+		}
+		if _, dup := seen[d]; dup {
+			continue
+		}
+		seen[d] = struct{}{}
+		targets = append(targets, d)
+	}
+	return targets
+}
+
 // --- MAIN LOGIC ---
 func main() {
 
@@ -85,6 +109,7 @@ func main() {
 	inputFile := flag.String("d", "", "Path to file with domains. If empty, reads from stdin.")
 	silent := flag.Bool("silent", false, "Run in silent mode, only outputting URLs to stdout.")
 	excludeSources := flag.String("e", "", "Comma-separated list of sources to exclude (vt, otx, wayback, hr).")
+	delay := flag.Duration("delay", 20*time.Second, "Pause between scanning consecutive domains.")
 	versionFlag := flag.Bool("version", false, "Print the version of the tool.")
 	flag.Parse()
 
@@ -122,18 +147,23 @@ func main() {
 		log.Fatal(logging.ColorRed + "[FATAL] No domains provided for scanning." + logging.ColorReset)
 	}
 
+	// Normalize once up front: clean every line, validate, and dedupe.
+	// Progress reporting, resume matching and the inter-domain delay all
+	// work off this list, so skipped/invalid lines never skew them.
+	targets := normalizeDomains(domains, *silent)
+
 	// Read the log file to find the last processed domain
 	if _, err := os.Stat(logFileName); err == nil {
 		logData, err := os.ReadFile(logFileName)
 		if err == nil {
 			lastProcessedDomain := strings.TrimSpace(string(logData))
 			if lastProcessedDomain != "" {
-				for i, d := range domains {
+				for i, d := range targets {
 					if d == lastProcessedDomain {
 						if !*silent {
 							log.Printf(logging.ColorBlue+"[INFO] Resuming from domain: %s"+logging.ColorReset, d)
 						}
-						domains = domains[i:]
+						targets = targets[i:]
 						break
 					}
 				}
@@ -142,7 +172,7 @@ func main() {
 	}
 
 	if !*silent {
-		log.Printf(logging.ColorBlue+"[INFO] Loaded %d domains."+logging.ColorReset, len(domains))
+		log.Printf(logging.ColorBlue+"[INFO] Loaded %d domains."+logging.ColorReset, len(targets))
 	}
 
 	excludedMap := make(map[string]bool)
@@ -209,30 +239,10 @@ func main() {
 	}()
 
 	apiKeyIndex := 0
-	for i, d := range domains {
-		d = strings.TrimSpace(d)
-		if d == "" {
-			continue
-		}
-		// Clean the domain line
-		d = domain.CleanDomainLine(d)
-		if d == "" { // Check again if cleaning made it empty
-			if !*silent {
-				log.Printf(logging.ColorYellow + "[WARNING] Skipping domain after cleaning resulted in empty string." + logging.ColorReset)
-			}
-			continue
-		}
-		// Validate domain format
-		if !domain.IsValidDomain(d) {
-			if !*silent {
-				log.Printf(logging.ColorYellow+"[WARNING] Skipping invalid domain format: %s"+logging.ColorReset, d)
-			}
-			continue
-		}
-
+	for i, d := range targets {
 		if !*silent {
-			percentage := float64(i+1) / float64(len(domains)) * 100
-			log.Printf(logging.ColorBlue+"[INFO] Processing domain %d/%d (%.2f%%): %s"+logging.ColorReset, i+1, len(domains), percentage, d)
+			percentage := float64(i+1) / float64(len(targets)) * 100
+			log.Printf(logging.ColorBlue+"[INFO] Processing domain %d/%d (%.2f%%): %s"+logging.ColorReset, i+1, len(targets), percentage, d)
 		}
 		urlChannel := make(chan sources.Result, 4)
 		logChan := make(chan logging.Message, 4)
@@ -327,8 +337,10 @@ func main() {
 
 		apiKeyIndex++
 
-		if i < len(domains)-1 {
-			time.Sleep(requestDelay)
+		// Pause between domains only when a scan actually happened and more
+		// targets remain.
+		if runCount > 0 && i < len(targets)-1 {
+			time.Sleep(*delay)
 		}
 
 	}

@@ -43,7 +43,7 @@
 ![Language](https://img.shields.io/badge/Language-Go-blue.svg)
 ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg)
 [![CI](https://github.com/PhilopaterSh/Ph.Sh_url/actions/workflows/ci.yml/badge.svg)](https://github.com/PhilopaterSh/Ph.Sh_url/actions/workflows/ci.yml)
-![Program Version](https://img.shields.io/badge/Version-1.2.2-blue.svg)
+![Program Version](https://img.shields.io/badge/Version-1.2.3-blue.svg)
 ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -59,6 +59,13 @@
 - **Silent Mode**: The `-silent` option prints only URLs, ideal for scripting. When not in silent mode, logging output is concise, without timestamps, with simplified source-specific messages, and includes a domain counter (e.g., `Processing domain 5/100: example.com`).
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
 - **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
+
+## 🚀 What's New in v1.2.3
+
+- **Domains are normalized once, up front**: cleaning, validation, lowercasing and de-duplication happen before scanning, so progress percentage, resume matching and the inter-domain pause are all exact (previously mixed-case duplicates slipped through and skipped lines skewed the percentage).
+- **`-delay` flag**: the 20-second pause between domains is now configurable (`-delay 5s`, `-delay 1m`, ...).
+- **Smarter pauses**: no pause when no sources were selected, and none after the last target.
+- **Resume works on the normalized list**: the log file stores cleaned domains, and resume now matches against cleaned input lines.
 
 ## 🚀 What's New in v1.2.2
 
@@ -254,6 +261,7 @@ After installation, the binary will be located in your `$GOPATH/bin` directory. 
 | `-silent` | Suppress all informational and error messages, printing only the discovered URLs to standard output.         | `./Ph.Sh_url -d domains.txt -silent > found_urls.txt` |
 | `-e`      | Exclude specific data sources (comma-separated: `vt`, `otx`, `wayback`, `hr`).                                | `./Ph.Sh_url -d domains.txt -e vt,hr`                 |
 | `-version`| Display the installed version of `Ph.Sh_URL`.                                                                | `./Ph.Sh_url -version`                                |
+| `-delay`  | Pause between scanning consecutive domains. (Default: `20s`)                                                 | `./Ph.Sh_url -d domains.txt -delay 10s`               |
 
 ### Full Example
 
