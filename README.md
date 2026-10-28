@@ -43,7 +43,7 @@
 ![Language](https://img.shields.io/badge/Language-Go-blue.svg)
 ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg)
 [![CI](https://github.com/PhilopaterSh/Ph.Sh_url/actions/workflows/ci.yml/badge.svg)](https://github.com/PhilopaterSh/Ph.Sh_url/actions/workflows/ci.yml)
-![Program Version](https://img.shields.io/badge/Version-1.2.1-blue.svg)
+![Program Version](https://img.shields.io/badge/Version-1.2.2-blue.svg)
 ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -59,6 +59,14 @@
 - **Silent Mode**: The `-silent` option prints only URLs, ideal for scripting. When not in silent mode, logging output is concise, without timestamps, with simplified source-specific messages, and includes a domain counter (e.g., `Processing domain 5/100: example.com`).
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
 - **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
+
+## 🚀 What's New in v1.2.2
+
+- **"Scanned successfully, found nothing" is no longer a failure**: every source now reports its outcome explicitly (`Result{URLs, Err}`). Previously a successful scan returning zero URLs was indistinguishable from a crashed one, so such domains landed in `failed_domains.txt` and were re-scanned on every resume.
+- **VirusTotal without a key is now explicit**: it logs `No API key configured — skipping source` and counts as not-scanned instead of failing silently.
+- **Response read/decode errors are handled**: truncated or malformed JSON no longer silently becomes "Found 0 URLs".
+- **`-silent` now also writes the output file**, matching the documented merge-and-overwrite contract (it previously printed URLs only).
+- **Wayback responses are capped** (512MB `LimitReader`) so huge archives can't exhaust memory.
 
 ## 🚀 What's New in v1.2.1
 

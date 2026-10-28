@@ -21,7 +21,7 @@ const (
 	requestDelay = 20 * time.Second
 	logFileName  = "Ph.Sh_URL.log"
 
-	version = "1.2.1" // Tool version
+	version = "1.2.2" // Tool version
 )
 
 // --- BANNER FUNCTION ---
@@ -234,7 +234,7 @@ func main() {
 			percentage := float64(i+1) / float64(len(domains)) * 100
 			log.Printf(logging.ColorBlue+"[INFO] Processing domain %d/%d (%.2f%%): %s"+logging.ColorReset, i+1, len(domains), percentage, d)
 		}
-		urlChannel := make(chan []string, 4)
+		urlChannel := make(chan sources.Result, 4)
 		logChan := make(chan logging.Message, 4)
 		var wg sync.WaitGroup
 		var logWg sync.WaitGroup
@@ -299,11 +299,14 @@ func main() {
 
 		logWg.Wait()
 		resultsMu.Lock()
-		for urls := range urlChannel {
-			if urls != nil {
+		for res := range urlChannel {
+			// res.Err == nil means the source completed its scan — even with
+			// zero results. A scan that found nothing is still a success;
+			// only real errors leave the domain unprocessed.
+			if res.Err == nil {
 				domainSuccess = true
 			}
-			for _, u := range urls {
+			for _, u := range res.URLs {
 				finalUrlSet[u] = struct{}{}
 			}
 		}
@@ -346,14 +349,16 @@ func main() {
 		}
 	}
 
+	// Both modes write the merged, de-duplicated output file; silent mode
+	// additionally prints the URLs for piping.
+	if err := writeLinesToFile(*outputFile, finalUrls); err != nil {
+		log.Fatalf(logging.ColorRed+"[FATAL] Failed to write URLs: %v"+logging.ColorReset, err)
+	}
 	if *silent {
 		for _, u := range finalUrls {
 			fmt.Println(u)
 		}
 	} else {
-		if err := writeLinesToFile(*outputFile, finalUrls); err != nil {
-			log.Fatalf(logging.ColorRed+"[FATAL] Failed to write URLs: %v"+logging.ColorReset, err)
-		}
 		log.Printf(logging.ColorGreen+"[SUCCESS] All done! Found %d unique URLs. Results saved to %s"+logging.ColorReset, len(finalUrls), *outputFile)
 	}
 

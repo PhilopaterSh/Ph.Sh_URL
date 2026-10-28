@@ -2,6 +2,7 @@ package sources
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,10 +17,15 @@ type virusTotalResponse struct {
 }
 
 // FetchVirusTotalURLs queries VirusTotal's domain report for undetected URLs.
-// It requires an API key; if none is configured it returns immediately.
-func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- []string, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
+// It requires an API key; without one it reports a failure so the domain is
+// not treated as scanned.
+func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- Result, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
 	defer wg.Done()
 	if len(apiKeys) == 0 {
+		if !silent {
+			logChan <- logging.Message{Type: "INFO", Source: "VT", Message: "No API key configured — skipping source"}
+		}
+		ch <- Result{URLs: nil, Err: errors.New("no API key configured")}
 		return
 	}
 	apiKey := apiKeys[apiKeyIndex%len(apiKeys)]
@@ -30,7 +36,7 @@ func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		if !silent {
 			logChan <- logging.Message{Type: "ERROR", Source: "VT", Message: fmt.Sprintf("Failed to create request: %v", err)}
 		}
-		ch <- nil
+		ch <- Result{URLs: nil, Err: err}
 		return
 	}
 
@@ -39,14 +45,27 @@ func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		if !silent {
 			logChan <- logging.Message{Type: "ERROR", Source: "VT", Message: err.Error()}
 		}
-		ch <- nil
+		ch <- Result{URLs: nil, Err: err}
 		return
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	var fetchErr error
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		if !silent {
+			logChan <- logging.Message{Type: "ERROR", Source: "VT", Message: fmt.Sprintf("Failed to read response: %v", err)}
+		}
+		fetchErr = err
+	}
 	var r virusTotalResponse
-	json.Unmarshal(body, &r)
+	if decodeErr := json.Unmarshal(body, &r); decodeErr != nil && fetchErr == nil {
+		if !silent {
+			logChan <- logging.Message{Type: "ERROR", Source: "VT", Message: fmt.Sprintf("Failed to decode response: %v", decodeErr)}
+		}
+		fetchErr = decodeErr
+	}
+
 	var urls []string
 	if r.ResponseCode == 1 {
 		for _, item := range r.UndetectedUrls {
@@ -58,5 +77,5 @@ func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 	if !silent {
 		logChan <- logging.Message{Type: "SUCCESS", Source: "VT", Message: fmt.Sprintf("Found %d URLs", len(urls))}
 	}
-	ch <- urls
+	ch <- Result{URLs: urls, Err: fetchErr}
 }

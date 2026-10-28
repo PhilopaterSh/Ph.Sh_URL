@@ -20,7 +20,7 @@ type hudsonRockResponse struct {
 
 // FetchHudsonRockURLs queries Hudson Rock's OSINT search-by-domain endpoint.
 // Works without an API key, but results may be redacted/encrypted.
-func FetchHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- []string, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
+func FetchHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- Result, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
 	defer wg.Done()
 
 	url := fmt.Sprintf("https://cavalier.hudsonrock.com/api/json/v2/osint-tools/search-by-domain?domain=%s", domain)
@@ -29,7 +29,7 @@ func FetchHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		if !silent {
 			logChan <- logging.Message{Type: "ERROR", Source: "HudsonRock", Message: fmt.Sprintf("Failed to create request: %v", err)}
 		}
-		ch <- nil
+		ch <- Result{URLs: nil, Err: err}
 		return
 	}
 
@@ -47,14 +47,26 @@ func FetchHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		if !silent {
 			logChan <- logging.Message{Type: "ERROR", Source: "HudsonRock", Message: err.Error()}
 		}
-		ch <- nil
+		ch <- Result{URLs: nil, Err: err}
 		return
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	var fetchErr error
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		if !silent {
+			logChan <- logging.Message{Type: "ERROR", Source: "HudsonRock", Message: fmt.Sprintf("Failed to read response: %v", err)}
+		}
+		fetchErr = err
+	}
 	var r hudsonRockResponse
-	json.Unmarshal(body, &r)
+	if decodeErr := json.Unmarshal(body, &r); decodeErr != nil && fetchErr == nil {
+		if !silent {
+			logChan <- logging.Message{Type: "ERROR", Source: "HudsonRock", Message: fmt.Sprintf("Failed to decode response: %v", decodeErr)}
+		}
+		fetchErr = decodeErr
+	}
 
 	var urls []string
 	for _, item := range r.Data.AllURLs {
@@ -64,5 +76,5 @@ func FetchHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 	if !silent {
 		logChan <- logging.Message{Type: "SUCCESS", Source: "HudsonRock", Message: fmt.Sprintf("Found %d URLs", len(urls))}
 	}
-	ch <- urls
+	ch <- Result{URLs: urls, Err: fetchErr}
 }

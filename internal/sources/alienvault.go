@@ -20,9 +20,10 @@ type alienVaultResponse struct {
 // FetchAlienVaultURLs queries AlienVault OTX's URL list for a domain,
 // paginating until has_next is false. Works without an API key, though one
 // is preferred for better results.
-func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- []string, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
+func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- Result, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
 	defer wg.Done()
 	var allUrls []string
+	var fetchErr error
 	page := 1
 	for {
 		url := fmt.Sprintf("https://otx.alienvault.com/api/v1/indicators/domain/%s/url_list?limit=500&page=%d", domain, page)
@@ -31,6 +32,7 @@ func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 			if !silent {
 				logChan <- logging.Message{Type: "ERROR", Source: "OTX", Message: fmt.Sprintf("Failed to create request: %v", err)}
 			}
+			fetchErr = err
 			break
 		}
 
@@ -44,13 +46,27 @@ func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 			if !silent {
 				logChan <- logging.Message{Type: "ERROR", Source: "OTX", Message: err.Error()}
 			}
+			fetchErr = err
 			break
 		}
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if err != nil {
+			if !silent {
+				logChan <- logging.Message{Type: "ERROR", Source: "OTX", Message: fmt.Sprintf("Failed to read response: %v", err)}
+			}
+			fetchErr = err
+			break
+		}
 		var r alienVaultResponse
-		json.Unmarshal(body, &r)
+		if err := json.Unmarshal(body, &r); err != nil {
+			if !silent {
+				logChan <- logging.Message{Type: "ERROR", Source: "OTX", Message: fmt.Sprintf("Failed to decode response: %v", err)}
+			}
+			fetchErr = err
+			break
+		}
 		for _, item := range r.URLList {
 			allUrls = append(allUrls, item.URL)
 		}
@@ -59,8 +75,5 @@ func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		}
 		page++
 	}
-	if !silent {
-		logChan <- logging.Message{Type: "SUCCESS", Source: "OTX", Message: fmt.Sprintf("Found %d URLs", len(allUrls))}
-	}
-	ch <- allUrls
+	ch <- Result{URLs: allUrls, Err: fetchErr}
 }
