@@ -21,7 +21,7 @@ const (
 	requestDelay = 20 * time.Second
 	logFileName  = "Ph.Sh_URL.log"
 
-	version = "1.2.0" // Tool version
+	version = "1.2.1" // Tool version
 )
 
 // --- BANNER FUNCTION ---

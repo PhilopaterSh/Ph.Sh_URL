@@ -42,7 +42,8 @@
 
 ![Language](https://img.shields.io/badge/Language-Go-blue.svg)
 ![Go Version](https://img.shields.io/badge/Go_Version-1.25.1-blue.svg)
-![Program Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)
+[![CI](https://github.com/PhilopaterSh/Ph.Sh_url/actions/workflows/ci.yml/badge.svg)](https://github.com/PhilopaterSh/Ph.Sh_url/actions/workflows/ci.yml)
+![Program Version](https://img.shields.io/badge/Version-1.2.1-blue.svg)
 ![Dependencies](https://img.shields.io/badge/Dependencies-gopkg.in/yaml.v3-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -59,12 +60,20 @@
 - **Clean Results**: Deduplicates found URLs and saves them to a single text file. Also, performs enhanced validation and cleaning of input domains, skipping invalid ones with a warning.
 - **Stateful Resumption**: The tool saves its progress and, upon restart, resumes from where it left off without overwriting previously found URLs, ensuring that results from multiple sessions are merged.
 
+## 🚀 What's New in v1.2.1
+
+- **Fixed silent failures on HTTP errors**: The shared retry helper never checked `StatusCode`, so 403/429/5xx responses were decoded as data and logged as `SUCCESS: Found 0 URLs`. It now retries on 429/5xx and network errors, and fails fast with a clear error on other 4xx responses.
+- **Added a 30s HTTP client timeout**: previously an unbounded default client meant a single stalled connection could hang the tool forever.
+- **Safer domain cleaning**: input like `example.com/extra` or `a.com,b.com` no longer fuses into a bogus domain such as `example.comextra`; validation also accepts punycode TLDs (`example.xn--p1ai`).
+- **Config file permissions**: `config.yaml` (which holds API keys) is now written `0600` (owner-only) instead of `0644`.
+- **Race-detector CI**: tests now run with `-race`.
+
 ## 🚀 What's New in v1.2.0
 
 - **Fixed a response-body leak**: The AlienVault OTX pagination loop now closes each page's HTTP response as soon as it's read, instead of deferring all closes until the whole domain finished paginating.
 - **Fixed a data race**: URL results and failed-domain tracking are now guarded by a mutex, since both the main scan loop and the Ctrl+C interrupt handler could touch them concurrently.
 - **Placeholder API keys are now ignored**: If `config.yaml` still has the default `YOUR_..._API_KEY_1` placeholders, those sources are treated as keyless instead of sending invalid keys on every request.
-- **Added a test suite and CI**: `main_test.go` covers domain validation/cleaning and key filtering; a GitHub Actions workflow now runs `go build`, `go vet`, and `go test` on every push and PR.
+- **Added a test suite and CI**: tests cover domain validation/cleaning (`internal/domain`) and key filtering (`internal/config`); a GitHub Actions workflow now runs `go build`, `go vet`, and `go test` on every push and PR.
 
 ## 🚀 What's New in v1.1.9
 
@@ -90,7 +99,6 @@ Here is an example of the new output:
 [VT] Found 0 URLs
 [Wayback] Found 3 URLs
 [HudsonRock] Found 0 URLs
-[INFO] Waiting for 20s before next domain. Estimated time remaining: 40s
 [INFO] Processing domain 2/3 (66.67%): example.com
 ```
 
@@ -98,14 +106,12 @@ Here is an example of the new output:
 
 To enhance user experience, `Ph.Sh_URL` now includes:
 
--   **Progress Percentage**: Displays the completion percentage as it processes domains.
--   **Estimated Time Remaining**: Shows an estimated time until all domains are processed.
+-   **Progress Percentage**: Displays the completion percentage as it processes domains. A fixed 20-second pause separates consecutive domains.
 
 Example of the new progress indication:
 ```
 [INFO] Processing domain 1/3 (33.33%): google.com
 ...
-[INFO] Waiting for 20s before next domain. Estimated time remaining: 40s
 [INFO] Processing domain 2/3 (66.67%): example.com
 ...
 ```
@@ -137,7 +143,7 @@ The tool relies on the following sources:
 1.  **VirusTotal**: Requires an API key.
 2.  **AlienVault OTX**: Works without a key, but using one is preferred for better results.
 3.  **The Wayback Machine**: Works without a key.
-4.  **Hudson Rock**: Requires an API key for full data. If no API key is provided, the tool will attempt to fetch data but will filter out common redacted/encrypted URL patterns.
+4.  **Hudson Rock**: Works without a key, but an API key unlocks full (unredacted) data.
 
 ---
 
