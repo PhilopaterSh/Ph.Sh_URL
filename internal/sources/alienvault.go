@@ -51,7 +51,7 @@ func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			if !silent {
 				logChan <- logging.Message{Type: "ERROR", Source: "OTX", Message: fmt.Sprintf("Failed to read response: %v", err)}

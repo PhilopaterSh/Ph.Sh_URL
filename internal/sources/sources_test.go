@@ -45,16 +45,6 @@ func useStub(t *testing.T, s *stubTransport) func() {
 	}
 }
 
-func drainLog(logChan chan logging.Message) {
-	for {
-		select {
-		case <-logChan:
-		default:
-			return
-		}
-	}
-}
-
 // --- MakeRequestWithRetry: the v1.2.1 P0 regression tests ---
 
 func TestMakeRequestWithRetryRetriesOn5xxThenSucceeds(t *testing.T) {
@@ -73,7 +63,7 @@ func TestMakeRequestWithRetryRetriesOn5xxThenSucceeds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success after retries, got: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if s.calls != 3 {
 		t.Errorf("expected 3 attempts, got %d", s.calls)
 	}

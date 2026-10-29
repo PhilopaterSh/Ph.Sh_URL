@@ -36,14 +36,13 @@ func MakeRequestWithRetry(req *http.Request, silent bool, logChan chan<- logging
 			lastErr = err
 		} else if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			lastErr = fmt.Errorf("server returned status: %s", resp.Status)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		} else if resp.StatusCode >= 400 {
 			// Permanent client error (401/403/404/...): fail fast with a
 			// clear message instead of letting the caller decode an error
 			// body as data.
-			resp.Body.Close()
-			return nil, fmt.Errorf("server returned status: %s", resp.Status)
-		} else {
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("server returned status: %s", resp.Status)		} else {
 			// 2xx/3xx — success
 			return resp, nil
 		}

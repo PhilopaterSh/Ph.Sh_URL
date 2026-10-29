@@ -48,7 +48,7 @@ func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		ch <- Result{URLs: nil, Err: err}
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var fetchErr error
 	body, err := io.ReadAll(resp.Body)

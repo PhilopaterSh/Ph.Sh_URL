@@ -25,3 +25,8 @@ jobs:
 
       - name: Race-detector tests
         run: go test -race ./... -v
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0

@@ -33,7 +33,7 @@ func FetchWaybackURLs(domain string, ch chan<- Result, logChan chan<- logging.Me
 		ch <- Result{URLs: nil, Err: err}
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var fetchErr error
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 512<<20)) // cap huge CDX responses at 512MB
