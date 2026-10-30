@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -14,7 +15,7 @@ import (
 // under a domain. Works without an API key.
 func FetchWaybackURLs(domain string, ch chan<- Result, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
 	defer wg.Done()
-	url := fmt.Sprintf("https://web.archive.org/cdx/search/cdx?url=*.%s/*&output=text&fl=original&collapse=urlkey", domain)
+	url := fmt.Sprintf("https://web.archive.org/cdx/search/cdx?url=*.%s/*&output=text&fl=original&collapse=urlkey", url.QueryEscape(domain))
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

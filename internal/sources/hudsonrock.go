@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/PhilopaterSh/Ph.Sh_url/internal/logging"
@@ -23,7 +24,7 @@ type hudsonRockResponse struct {
 func FetchHudsonRockURLs(domain string, apiKeys []string, apiKeyIndex int, ch chan<- Result, logChan chan<- logging.Message, wg *sync.WaitGroup, silent bool) {
 	defer wg.Done()
 
-	url := fmt.Sprintf("https://cavalier.hudsonrock.com/api/json/v2/osint-tools/search-by-domain?domain=%s", domain)
+	url := fmt.Sprintf("https://cavalier.hudsonrock.com/api/json/v2/osint-tools/search-by-domain?domain=%s", url.QueryEscape(domain))
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		if !silent {

@@ -42,7 +42,8 @@ func MakeRequestWithRetry(req *http.Request, silent bool, logChan chan<- logging
 			// clear message instead of letting the caller decode an error
 			// body as data.
 			_ = resp.Body.Close()
-			return nil, fmt.Errorf("server returned status: %s", resp.Status)		} else {
+			return nil, fmt.Errorf("server returned status: %s", resp.Status)
+		} else {
 			// 2xx/3xx — success
 			return resp, nil
 		}

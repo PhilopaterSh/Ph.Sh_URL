@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/PhilopaterSh/Ph.Sh_url/internal/logging"
@@ -29,7 +30,7 @@ func FetchVirusTotalURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 		return
 	}
 	apiKey := apiKeys[apiKeyIndex%len(apiKeys)]
-	url := fmt.Sprintf("https://www.virustotal.com/vtapi/v2/domain/report?apikey=%s&domain=%s", apiKey, domain)
+	url := fmt.Sprintf("https://www.virustotal.com/vtapi/v2/domain/report?apikey=%s&domain=%s", apiKey, url.QueryEscape(domain))
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

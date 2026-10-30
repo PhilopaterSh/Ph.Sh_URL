@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/PhilopaterSh/Ph.Sh_url/internal/logging"
@@ -26,7 +27,7 @@ func FetchAlienVaultURLs(domain string, apiKeys []string, apiKeyIndex int, ch ch
 	var fetchErr error
 	page := 1
 	for {
-		url := fmt.Sprintf("https://otx.alienvault.com/api/v1/indicators/domain/%s/url_list?limit=500&page=%d", domain, page)
+		url := fmt.Sprintf("https://otx.alienvault.com/api/v1/indicators/domain/%s/url_list?limit=500&page=%d", url.PathEscape(domain), page)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			if !silent {
